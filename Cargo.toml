@@ -2,7 +2,7 @@
 name = "ferox"
 description = "Ferox is a ray-tracing renderer written in Rust." 
 license = "CC0-1.0" 
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
@@ -10,5 +10,5 @@ glam = "0.30.1"
 image = "0.25.5"
 
 [[bin]]
-name = "raytracer"
+name = "ferox"
 path = "main.rs"

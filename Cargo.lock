@@ -224,6 +224,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferox"
+version = "0.2.0"
+dependencies = [
+ "glam",
+ "image",
+]
+
+[[package]]
 name = "flate2"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -697,14 +705,6 @@ checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "raytracer"
-version = "0.1.0"
-dependencies = [
- "glam",
- "image",
 ]
 
 [[package]]

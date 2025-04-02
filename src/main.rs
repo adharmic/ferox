@@ -3,11 +3,12 @@ mod structures;
 
 use glam::Vec3;
 use image::Rgb;
-use structures::{Material, Sphere};
+use structures::{Light, Material, Sphere};
 
 fn main() {
     println!("Hello, world!");
     let mut spheres = Vec::new();
+    let mut lights = Vec::new();
     spheres.push(Sphere::new(
         Vec3::new(-3f32, 0f32, -16f32),
         2f32,
@@ -23,5 +24,8 @@ fn main() {
         2f32,
         Material::new(Rgb([0, 0, 255])),
     ));
-    raytracer::render(&spheres);
+
+    lights.push(Light::new(Vec3::new(-20f32, -20f32, -20f32), 0.5));
+    lights.push(Light::new(Vec3::new(20f32, 10f32, -10f32), 1.5));
+    raytracer::render(&spheres, &lights);
 }

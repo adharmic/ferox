@@ -5,6 +5,20 @@ use image::Rgb;
 // The scene_intersect function should be implemented for this struct as it will have direct access to all scene objects.
 // Can support functions for adding/removing lights and objects.
 
+pub struct Light {
+    pub position: Vec3,
+    pub intensity: f32,
+}
+
+impl Light {
+    pub fn new(position: Vec3, intensity: f32) -> Light {
+        Light {
+            position,
+            intensity,
+        }
+    }
+}
+
 pub struct Material {
     pub diffuse_color: Rgb<u8>,
 }

@@ -68,9 +68,9 @@ fn cast_ray(origin: &Vec3, direction: &Vec3, spheres: &[Sphere], lights: &[Light
             normal = intersection.normal;
             material = intersection.material;
         }
-        None => return Rgb([100, 100, 80]),
+        None => return Rgb([50, 180, 200]),
     }
-    return calculate_lighting_color(&material, lights, &hit, &normal);
+    return calculate_lighting_color(&material, lights, &hit, &normal, &direction);
 }
 
 fn calculate_lighting_color(
@@ -78,16 +78,35 @@ fn calculate_lighting_color(
     lights: &[Light],
     hit: &Vec3,
     normal: &Vec3,
+    direction: &Vec3,
 ) -> Rgb<u8> {
     let mut diffuse_light_intensity = 0f32;
+    let mut specular_light_intensity = 0f32;
+    let mut calculated_color = Vec3::new(
+        material.diffuse_color.0[0] as f32 / 255 as f32,
+        material.diffuse_color.0[1] as f32 / 255 as f32,
+        material.diffuse_color.0[2] as f32 / 255 as f32,
+    );
+
     for light in lights {
         let light_direction: Vec3 = (light.position - hit).normalize();
         diffuse_light_intensity += light.intensity * f32::max(0f32, light_direction.dot(*normal));
+        specular_light_intensity += f32::powf(
+            f32::max(
+                0f32,
+                -calculate_reflection(&(-light_direction), &normal).dot(*direction),
+            ),
+            material.specular_exponent * light.intensity,
+        )
     }
+
+    calculated_color = calculated_color * diffuse_light_intensity * material.albedo[0]
+        + Vec3::ONE * specular_light_intensity * material.albedo[1];
+
     return Rgb([
-        (material.diffuse_color.0[0] as f32 * diffuse_light_intensity) as u8,
-        (material.diffuse_color.0[1] as f32 * diffuse_light_intensity) as u8,
-        (material.diffuse_color.0[2] as f32 * diffuse_light_intensity) as u8,
+        u8::clamp((calculated_color[0] * 255f32) as u8, 0, 255),
+        u8::clamp((calculated_color[1] * 255f32) as u8, 0, 255),
+        u8::clamp((calculated_color[2] * 255f32) as u8, 0, 255),
     ]);
 }
 
@@ -110,4 +129,8 @@ pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
     }
 
     frame_buffer.save("out.png").unwrap();
+}
+
+fn calculate_reflection(incident: &Vec3, normal: &Vec3) -> Vec3 {
+    return incident - normal * 2f32 * incident.dot(*normal);
 }

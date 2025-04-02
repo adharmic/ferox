@@ -21,10 +21,10 @@ I am planning on adding support for JSON-based scene loading and overrideable ou
 - [x] Lighting
 - [x] Specularity
 - [x] Shadows
-- [] Reflections
-- [] Refraction
-- [] Additional object types and meshes
-- [] Loadable scene configurations
-- [] CLI image generation and output options
-- [] GUI with parametric support
-- [] Real-time calculations and camera movement
+- [ ] Reflections
+- [ ] Refraction
+- [ ] Additional object types and meshes
+- [ ] Loadable scene configurations
+- [ ] CLI image generation and output options
+- [ ] GUI with parametric support
+- [ ] Real-time calculations and camera movement

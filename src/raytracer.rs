@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use glam::Vec3;
 use image::{ImageBuffer, Rgb, RgbImage};
 
-use crate::structures::{Light, Material, Sphere};
+use crate::structures::{Intersection, Light, Material, Sphere};
 
 impl Sphere {
     // For reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
@@ -30,48 +30,43 @@ impl Sphere {
     }
 }
 
-pub fn scene_intersect<'a, 'b>(
+pub fn scene_intersect(
     origin: &Vec3,
     direction: &Vec3,
-    spheres: &'a Vec<Sphere>,
-) -> Option<(Vec3, Vec3, Material)> {
+    spheres: &[Sphere],
+) -> Option<Intersection> {
+    let mut closest_intersection: Option<Intersection> = None;
     let mut min_distance = f32::MAX;
-    let mut hit = Vec3::ZERO;
-    let mut normal = Vec3::ZERO;
-    let mut material = Material::new(Rgb([0, 0, 0]));
     for sphere in spheres {
         if let Some(sphere_distance) = sphere.ray_intersect(origin, direction) {
-            if sphere_distance < min_distance {
+            // TODO: Add variable for render distance?
+            if sphere_distance < min_distance && sphere_distance < 1000f32 {
                 min_distance = sphere_distance;
-                hit = origin + direction * sphere_distance;
-                normal = (hit - sphere.center).normalize();
-                material.diffuse_color = sphere.material.diffuse_color;
+
+                let hit = origin + direction * sphere_distance;
+                let normal = (hit - sphere.center).normalize();
+                let material = sphere.material;
+                closest_intersection = Some(Intersection {
+                    point: hit,
+                    normal,
+                    material,
+                })
             }
         }
     }
-    // TODO: Add variable for render distance?
-    if min_distance < 1000f32 {
-        return Some((hit, normal, material));
-    }
-    return None;
+    return closest_intersection;
 }
 
-fn cast_ray(
-    origin: &Vec3,
-    direction: &Vec3,
-    spheres: &Vec<Sphere>,
-    lights: &Vec<Light>,
-) -> Rgb<u8> {
+fn cast_ray(origin: &Vec3, direction: &Vec3, spheres: &[Sphere], lights: &[Light]) -> Rgb<u8> {
     let hit: Vec3;
     let normal: Vec3;
     let material: Material;
 
-    // TODO: Need to determine if we should use a struct or stick to tuples.
     match scene_intersect(origin, direction, spheres) {
-        Some((h, n, m)) => {
-            hit = h;
-            normal = n;
-            material = m;
+        Some(intersection) => {
+            hit = intersection.point;
+            normal = intersection.normal;
+            material = intersection.material;
         }
         None => return Rgb([100, 100, 80]),
     }
@@ -80,7 +75,7 @@ fn cast_ray(
 
 fn calculate_lighting_color(
     material: &Material,
-    lights: &Vec<Light>,
+    lights: &[Light],
     hit: &Vec3,
     normal: &Vec3,
 ) -> Rgb<u8> {
@@ -96,7 +91,7 @@ fn calculate_lighting_color(
     ]);
 }
 
-pub fn render(spheres: &Vec<Sphere>, lights: &Vec<Light>) {
+pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
     const IMAGE_WIDTH: u32 = 1024;
     const IMAGE_HEIGHT: u32 = 768;
 

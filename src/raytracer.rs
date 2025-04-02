@@ -70,7 +70,7 @@ fn cast_ray(origin: &Vec3, direction: &Vec3, spheres: &[Sphere], lights: &[Light
         }
         None => return Rgb([50, 180, 200]),
     }
-    return calculate_lighting_color(&material, lights, &hit, &normal, &direction);
+    return calculate_lighting_color(&material, lights, &hit, &normal, &direction, spheres);
 }
 
 fn calculate_lighting_color(
@@ -79,6 +79,7 @@ fn calculate_lighting_color(
     hit: &Vec3,
     normal: &Vec3,
     direction: &Vec3,
+    spheres: &[Sphere],
 ) -> Rgb<u8> {
     let mut diffuse_light_intensity = 0f32;
     let mut specular_light_intensity = 0f32;
@@ -89,7 +90,21 @@ fn calculate_lighting_color(
     );
 
     for light in lights {
-        let light_direction: Vec3 = (light.position - hit).normalize();
+        let light_direction = (light.position - hit).normalize();
+        let light_distance = (light.position - hit).length();
+        let shadow_origin: Vec3;
+        if light_direction.dot(*normal) < 0f32 {
+            shadow_origin = hit - normal * 0.0001f32;
+        } else {
+            shadow_origin = hit + normal * 0.0001f32;
+        }
+        if let Some(shadow_intersection) =
+            scene_intersect(&shadow_origin, &light_direction, spheres)
+        {
+            if (shadow_intersection.point - shadow_origin).length() < light_distance {
+                continue;
+            }
+        }
         diffuse_light_intensity += light.intensity * f32::max(0f32, light_direction.dot(*normal));
         specular_light_intensity += f32::powf(
             f32::max(

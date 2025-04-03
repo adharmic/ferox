@@ -57,10 +57,21 @@ pub fn scene_intersect(
     return closest_intersection;
 }
 
-fn cast_ray(origin: &Vec3, direction: &Vec3, spheres: &[Sphere], lights: &[Light]) -> Rgb<u8> {
+fn cast_ray(
+    origin: &Vec3,
+    direction: &Vec3,
+    spheres: &[Sphere],
+    lights: &[Light],
+    recursive_depth: u8,
+) -> Rgb<u8> {
     let hit: Vec3;
     let normal: Vec3;
     let material: Material;
+    let background_color = Rgb([50, 180, 200]);
+
+    if recursive_depth > 4 {
+        return background_color;
+    }
 
     match scene_intersect(origin, direction, spheres) {
         Some(intersection) => {
@@ -68,19 +79,36 @@ fn cast_ray(origin: &Vec3, direction: &Vec3, spheres: &[Sphere], lights: &[Light
             normal = intersection.normal;
             material = intersection.material;
         }
-        None => return Rgb([50, 180, 200]),
+        None => return background_color,
     }
-    return calculate_lighting_color(&material, lights, &hit, &normal, &direction, spheres);
+
+    return calculate_color(
+        &material,
+        lights,
+        &hit,
+        &normal,
+        &direction,
+        spheres,
+        recursive_depth,
+    );
 }
 
-fn calculate_lighting_color(
+fn calculate_color(
     material: &Material,
     lights: &[Light],
     hit: &Vec3,
     normal: &Vec3,
     direction: &Vec3,
     spheres: &[Sphere],
+    recursive_depth: u8,
 ) -> Rgb<u8> {
+    let reflection_color =
+        calculate_reflection_color(direction, normal, hit, spheres, lights, recursive_depth);
+    let reflection_vector = Vec3::new(
+        reflection_color.0[0] as f32 / 255 as f32,
+        reflection_color.0[1] as f32 / 255 as f32,
+        reflection_color.0[2] as f32 / 255 as f32,
+    );
     let mut diffuse_light_intensity = 0f32;
     let mut specular_light_intensity = 0f32;
     let mut calculated_color = Vec3::new(
@@ -109,20 +137,45 @@ fn calculate_lighting_color(
         specular_light_intensity += f32::powf(
             f32::max(
                 0f32,
-                -calculate_reflection(&(-light_direction), &normal).dot(*direction),
+                -calculate_reflection_direction(&(-light_direction), &normal).dot(*direction),
             ),
             material.specular_exponent * light.intensity,
         )
     }
 
     calculated_color = calculated_color * diffuse_light_intensity * material.albedo[0]
-        + Vec3::ONE * specular_light_intensity * material.albedo[1];
+        + Vec3::ONE * specular_light_intensity * material.albedo[1]
+        + reflection_vector * material.albedo[2];
 
     return Rgb([
         u8::clamp((calculated_color[0] * 255f32) as u8, 0, 255),
         u8::clamp((calculated_color[1] * 255f32) as u8, 0, 255),
         u8::clamp((calculated_color[2] * 255f32) as u8, 0, 255),
     ]);
+}
+
+fn calculate_reflection_color(
+    direction: &Vec3,
+    normal: &Vec3,
+    hit: &Vec3,
+    spheres: &[Sphere],
+    lights: &[Light],
+    recursive_depth: u8,
+) -> Rgb<u8> {
+    let reflection_direction = calculate_reflection_direction(direction, normal);
+    let reflection_origin: Vec3;
+    if reflection_direction.dot(*normal) < 0f32 {
+        reflection_origin = hit - 0.0001f32;
+    } else {
+        reflection_origin = hit + 0.0001f32;
+    }
+    return cast_ray(
+        &reflection_origin,
+        &reflection_direction,
+        spheres,
+        lights,
+        recursive_depth + 1,
+    );
 }
 
 pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
@@ -140,12 +193,12 @@ pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
         let y_pos = -(2f32 * (y as f32 + 0.5) / IMAGE_HEIGHT as f32 - 1f32) * f32::tan(fov / 2f32);
 
         let direction = Vec3::normalize(Vec3::new(x_pos, y_pos, -1f32));
-        *pixel = cast_ray(&Vec3::ZERO, &direction, spheres, lights);
+        *pixel = cast_ray(&Vec3::ZERO, &direction, spheres, lights, 0);
     }
 
     frame_buffer.save("out.png").unwrap();
 }
 
-fn calculate_reflection(incident: &Vec3, normal: &Vec3) -> Vec3 {
+fn calculate_reflection_direction(incident: &Vec3, normal: &Vec3) -> Vec3 {
     return incident - normal * 2f32 * incident.dot(*normal);
 }

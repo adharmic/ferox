@@ -1,4 +1,4 @@
-use glam::Vec3;
+use glam::{Vec3, Vec4};
 use image::Rgb;
 
 // TODO: Create a Scene struct which will hold meshes and lights.
@@ -23,16 +23,23 @@ impl Light {
 #[derive(Debug, Clone, Copy)]
 pub struct Material {
     pub diffuse_color: Rgb<u8>,
-    pub albedo: Vec3,
+    pub albedo: Vec4,
     pub specular_exponent: f32,
+    pub refractive_index: f32,
 }
 
 impl Material {
-    pub fn new(color: Rgb<u8>, albedo: Vec3, specular_exponent: f32) -> Material {
+    pub fn new(
+        color: Rgb<u8>,
+        albedo: Vec4,
+        specular_exponent: f32,
+        refractive_index: f32,
+    ) -> Material {
         Material {
             diffuse_color: color,
             albedo,
             specular_exponent,
+            refractive_index,
         }
     }
 }

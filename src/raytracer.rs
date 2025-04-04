@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, mem::swap};
 
 use glam::Vec3;
 use image::{ImageBuffer, Rgb, RgbImage};
@@ -104,28 +104,26 @@ fn calculate_color(
 ) -> Rgb<u8> {
     let reflection_color =
         calculate_reflection_color(direction, normal, hit, spheres, lights, recursive_depth);
-    let reflection_vector = Vec3::new(
-        reflection_color.0[0] as f32 / 255 as f32,
-        reflection_color.0[1] as f32 / 255 as f32,
-        reflection_color.0[2] as f32 / 255 as f32,
-    );
-    let mut diffuse_light_intensity = 0f32;
-    let mut specular_light_intensity = 0f32;
-    let mut calculated_color = Vec3::new(
-        material.diffuse_color.0[0] as f32 / 255 as f32,
-        material.diffuse_color.0[1] as f32 / 255 as f32,
-        material.diffuse_color.0[2] as f32 / 255 as f32,
+    let refraction_color = calculate_refraction_color(
+        direction,
+        normal,
+        material,
+        hit,
+        spheres,
+        lights,
+        recursive_depth,
     );
 
+    let reflection_vector = calculate_vector_from_color(reflection_color);
+    let refraction_vector = calculate_vector_from_color(refraction_color);
+
+    let mut diffuse_light_intensity = 0f32;
+    let mut specular_light_intensity = 0f32;
+    let mut calculated_color = calculate_vector_from_color(material.diffuse_color);
     for light in lights {
         let light_direction = (light.position - hit).normalize();
         let light_distance = (light.position - hit).length();
-        let shadow_origin: Vec3;
-        if light_direction.dot(*normal) < 0f32 {
-            shadow_origin = hit - normal * 0.0001f32;
-        } else {
-            shadow_origin = hit + normal * 0.0001f32;
-        }
+        let shadow_origin = calculate_ray_offset(&light_direction, normal, hit);
         if let Some(shadow_intersection) =
             scene_intersect(&shadow_origin, &light_direction, spheres)
         {
@@ -137,7 +135,7 @@ fn calculate_color(
         specular_light_intensity += f32::powf(
             f32::max(
                 0f32,
-                -calculate_reflection_direction(&(-light_direction), &normal).dot(*direction),
+                -calculate_reflection_angle(&(-light_direction), &normal).dot(*direction),
             ),
             material.specular_exponent * light.intensity,
         )
@@ -145,13 +143,51 @@ fn calculate_color(
 
     calculated_color = calculated_color * diffuse_light_intensity * material.albedo[0]
         + Vec3::ONE * specular_light_intensity * material.albedo[1]
-        + reflection_vector * material.albedo[2];
+        + reflection_vector * material.albedo[2]
+        + refraction_vector * material.albedo[3];
 
     return Rgb([
         u8::clamp((calculated_color[0] * 255f32) as u8, 0, 255),
         u8::clamp((calculated_color[1] * 255f32) as u8, 0, 255),
         u8::clamp((calculated_color[2] * 255f32) as u8, 0, 255),
     ]);
+}
+
+fn calculate_vector_from_color(color: Rgb<u8>) -> Vec3 {
+    return Vec3::new(
+        color.0[0] as f32 / 255 as f32,
+        color.0[1] as f32 / 255 as f32,
+        color.0[2] as f32 / 255 as f32,
+    );
+}
+
+fn calculate_refraction_color(
+    incident: &Vec3,
+    normal: &Vec3,
+    material: &Material,
+    hit: &Vec3,
+    spheres: &[Sphere],
+    lights: &[Light],
+    recursive_depth: u8,
+) -> Rgb<u8> {
+    let refraction_direction =
+        calculate_refraction_angle(incident, normal, material.refractive_index);
+    let refraction_origin = calculate_ray_offset(&refraction_direction, normal, hit);
+    return cast_ray(
+        &refraction_origin,
+        &refraction_direction,
+        spheres,
+        lights,
+        recursive_depth + 1,
+    );
+}
+
+fn calculate_ray_offset(direction: &Vec3, normal: &Vec3, hit: &Vec3) -> Vec3 {
+    let offset = 0.0001f32;
+    return match direction.dot(*normal) < 0f32 {
+        true => hit - offset,
+        false => hit + offset,
+    };
 }
 
 fn calculate_reflection_color(
@@ -162,7 +198,7 @@ fn calculate_reflection_color(
     lights: &[Light],
     recursive_depth: u8,
 ) -> Rgb<u8> {
-    let reflection_direction = calculate_reflection_direction(direction, normal);
+    let reflection_direction = calculate_reflection_angle(direction, normal);
     let reflection_origin: Vec3;
     if reflection_direction.dot(*normal) < 0f32 {
         reflection_origin = hit - 0.0001f32;
@@ -199,6 +235,26 @@ pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
     frame_buffer.save("out.png").unwrap();
 }
 
-fn calculate_reflection_direction(incident: &Vec3, normal: &Vec3) -> Vec3 {
+fn calculate_reflection_angle(incident: &Vec3, normal: &Vec3) -> Vec3 {
     return incident - normal * 2f32 * incident.dot(*normal);
+}
+
+fn calculate_refraction_angle(incident: &Vec3, normal: &Vec3, refractive_index: f32) -> Vec3 {
+    let mut cosi = -f32::max(-1f32, f32::min(1f32, incident.dot(*normal)));
+    let mut etai = 1f32;
+    let mut etat = refractive_index;
+    let mut n = normal;
+    let normal_inverse = -normal;
+    let eta: f32;
+    if cosi < 0f32 {
+        cosi = -cosi;
+        swap(&mut etai, &mut etat);
+        n = &normal_inverse;
+    }
+    eta = etai / etat;
+    let k = 1f32 - eta * eta * (1f32 - cosi * cosi);
+    if k < 0f32 {
+        return Vec3::ZERO;
+    }
+    return incident * eta + n * (eta * cosi - f32::sqrt(k));
 }

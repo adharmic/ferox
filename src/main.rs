@@ -2,11 +2,12 @@ mod raytracer;
 mod structures;
 
 use glam::{Vec3, Vec4};
-use image::Rgb;
-use structures::{Light, Material, Sphere};
+use image::{ImageReader, Rgb};
+use structures::{Background, Light, Material, Sphere};
 
 fn main() {
     println!("Hello, world!");
+    let background = ImageReader::open("envmap.jpg").unwrap().decode().unwrap();
     let mut spheres = Vec::new();
     let mut lights = Vec::new();
     let ivory = Material::new(
@@ -41,5 +42,5 @@ fn main() {
     spheres.push(Sphere::new(Vec3::new(-3f32, 3f32, -5f32), 2f32, glass));
 
     lights.push(Light::new(Vec3::new(5f32, 5f32, -2f32), 1.5));
-    raytracer::render(&spheres, &lights);
+    raytracer::render(&spheres, &lights, Background::new(background));
 }

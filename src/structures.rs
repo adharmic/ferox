@@ -1,5 +1,5 @@
 use glam::{Vec3, Vec4};
-use image::Rgb;
+use image::{DynamicImage, Rgb};
 
 // TODO: Create a Scene struct which will hold meshes and lights.
 // The scene_intersect function should be implemented for this struct as it will have direct access to all scene objects.
@@ -65,4 +65,14 @@ pub struct Intersection {
     pub point: Vec3,
     pub normal: Vec3,
     pub material: Material,
+}
+
+pub struct Background {
+    pub image: DynamicImage,
+}
+
+impl Background {
+    pub fn new(image: DynamicImage) -> Background {
+        Background { image }
+    }
 }

@@ -1,13 +1,13 @@
 use std::{f32::consts::PI, mem::swap};
 
 use glam::Vec3;
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 
-use crate::structures::{Intersection, Light, Material, Sphere};
+use crate::structures::{Background, Intersection, Light, Material, Sphere};
 
 impl Sphere {
     // For reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
-    pub fn ray_intersect(&self, origin: &Vec3, direction: &Vec3) -> Option<f32> {
+    pub fn calculate_intersection_distance(&self, origin: &Vec3, direction: &Vec3) -> Option<f32> {
         let l = self.center - origin;
         let tca = l.dot(*direction);
         if tca < 0f32 {
@@ -28,6 +28,21 @@ impl Sphere {
         }
         return Some(t0);
     }
+
+    pub fn calculate_intersection_position(
+        self,
+        origin: &Vec3,
+        direction: &Vec3,
+        distance: f32,
+    ) -> Intersection {
+        let point = origin + direction * distance;
+        let normal = (point - self.center).normalize();
+        return Intersection {
+            point,
+            normal,
+            material: self.material,
+        };
+    }
 }
 
 pub fn scene_intersect(
@@ -38,19 +53,15 @@ pub fn scene_intersect(
     let mut closest_intersection: Option<Intersection> = None;
     let mut min_distance = f32::MAX;
     for sphere in spheres {
-        if let Some(sphere_distance) = sphere.ray_intersect(origin, direction) {
+        if let Some(sphere_distance) = sphere.calculate_intersection_distance(origin, direction) {
             // TODO: Add variable for render distance?
             if sphere_distance < min_distance && sphere_distance < 1000f32 {
                 min_distance = sphere_distance;
-
-                let hit = origin + direction * sphere_distance;
-                let normal = (hit - sphere.center).normalize();
-                let material = sphere.material;
-                closest_intersection = Some(Intersection {
-                    point: hit,
-                    normal,
-                    material,
-                })
+                closest_intersection = Some(sphere.calculate_intersection_position(
+                    origin,
+                    direction,
+                    sphere_distance,
+                ));
             }
         }
     }
@@ -63,11 +74,12 @@ fn cast_ray(
     spheres: &[Sphere],
     lights: &[Light],
     recursive_depth: u8,
+    background: &Background,
 ) -> Rgb<u8> {
     let hit: Vec3;
     let normal: Vec3;
     let material: Material;
-    let background_color = Rgb([50, 180, 200]);
+    let background_color = calculate_background_color(direction, background);
 
     if recursive_depth > 4 {
         return background_color;
@@ -90,7 +102,40 @@ fn cast_ray(
         &direction,
         spheres,
         recursive_depth,
+        background,
     );
+}
+
+fn calculate_background_color(direction: &Vec3, background: &Background) -> Rgb<u8> {
+    if background.image.dimensions() == (0, 0) {
+        return Rgb([50, 180, 200]);
+    }
+
+    let norm_direction = direction.normalize();
+
+    let px = norm_direction.x;
+    let py = norm_direction.y;
+    let pz = norm_direction.z;
+
+    let phi = f32::acos(f32::clamp(py, -1.0, 1.0));
+    let theta = f32::atan2(pz, px);
+
+    let u = (theta + PI) / (2.0 * PI);
+    let v = phi / PI;
+
+    let u = u.clamp(0.0, 1.0);
+    let v = v.clamp(0.0, 1.0);
+
+    let tex_width = background.image.dimensions().0;
+    let tex_height = background.image.dimensions().1;
+
+    let tex_x = u * (tex_width - 1) as f32;
+    let tex_y = v * (tex_height - 1) as f32; // Try: (1.0 - v) * (tex_height - 1) as f32; if flipped
+
+    return background
+        .image
+        .get_pixel(tex_x as u32, tex_y as u32)
+        .to_rgb();
 }
 
 fn calculate_color(
@@ -101,9 +146,17 @@ fn calculate_color(
     direction: &Vec3,
     spheres: &[Sphere],
     recursive_depth: u8,
+    background: &Background,
 ) -> Rgb<u8> {
-    let reflection_color =
-        calculate_reflection_color(direction, normal, hit, spheres, lights, recursive_depth);
+    let reflection_color = calculate_reflection_color(
+        direction,
+        normal,
+        hit,
+        spheres,
+        lights,
+        recursive_depth,
+        background,
+    );
     let refraction_color = calculate_refraction_color(
         direction,
         normal,
@@ -112,6 +165,7 @@ fn calculate_color(
         spheres,
         lights,
         recursive_depth,
+        background,
     );
 
     let reflection_vector = calculate_vector_from_color(reflection_color);
@@ -169,6 +223,7 @@ fn calculate_refraction_color(
     spheres: &[Sphere],
     lights: &[Light],
     recursive_depth: u8,
+    background: &Background,
 ) -> Rgb<u8> {
     let refraction_direction =
         calculate_refraction_angle(incident, normal, material.refractive_index);
@@ -179,6 +234,7 @@ fn calculate_refraction_color(
         spheres,
         lights,
         recursive_depth + 1,
+        background,
     );
 }
 
@@ -197,6 +253,7 @@ fn calculate_reflection_color(
     spheres: &[Sphere],
     lights: &[Light],
     recursive_depth: u8,
+    background: &Background,
 ) -> Rgb<u8> {
     let reflection_direction = calculate_reflection_angle(direction, normal);
     let reflection_origin: Vec3;
@@ -211,10 +268,11 @@ fn calculate_reflection_color(
         spheres,
         lights,
         recursive_depth + 1,
+        background,
     );
 }
 
-pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
+pub fn render(spheres: &Vec<Sphere>, lights: &[Light], background: Background) {
     const IMAGE_WIDTH: u32 = 1024;
     const IMAGE_HEIGHT: u32 = 768;
 
@@ -229,7 +287,7 @@ pub fn render(spheres: &Vec<Sphere>, lights: &[Light]) {
         let y_pos = -(2f32 * (y as f32 + 0.5) / IMAGE_HEIGHT as f32 - 1f32) * f32::tan(fov / 2f32);
 
         let direction = Vec3::normalize(Vec3::new(x_pos, y_pos, -1f32));
-        *pixel = cast_ray(&Vec3::ZERO, &direction, spheres, lights, 0);
+        *pixel = cast_ray(&Vec3::ZERO, &direction, spheres, lights, 0, &background);
     }
 
     frame_buffer.save("out.png").unwrap();

@@ -3,7 +3,7 @@ name = "ferox"
 description = "Ferox is a ray-tracing renderer written in Rust." 
 repository = "https://github.com/adharmic/ferox"
 license = "CC0-1.0" 
-version = "0.4.6"
+version = "0.4.7"
 edition = "2024"
 
 [dependencies]

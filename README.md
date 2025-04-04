@@ -23,6 +23,7 @@ I am planning on adding support for JSON-based scene loading and overrideable ou
 - [x] Shadows
 - [x] Reflections
 - [x] Refraction
+- [x] Environment map support
 - [ ] Additional object types and meshes
 - [ ] Refactor codebase for readability
 - [ ] Loadable scene configurations

@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "ferox"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "glam",
  "image",

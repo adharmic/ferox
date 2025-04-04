@@ -3,65 +3,18 @@ use std::{f32::consts::PI, mem::swap};
 use glam::Vec3;
 use image::{GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 
-use crate::structures::{Background, Intersection, Light, Material, Sphere};
+use crate::structures::{Background, Intersection, Material, Scene};
 
-impl Sphere {
-    // For reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
-    pub fn calculate_intersection_distance(&self, origin: &Vec3, direction: &Vec3) -> Option<f32> {
-        let l = self.center - origin;
-        let tca = l.dot(*direction);
-        if tca < 0f32 {
-            return None;
-        }
-        let d = f32::sqrt(l.dot(l) - tca * tca);
-        if d < 0f32 || d > self.radius {
-            return None;
-        }
-        let thc = f32::sqrt(self.radius * self.radius - d * d);
-        let mut t0 = tca - thc;
-        let t1 = tca + thc;
-        if t0 < 0f32 {
-            t0 = t1;
-        }
-        if t0 < 0f32 {
-            return None;
-        }
-        return Some(t0);
-    }
-
-    pub fn calculate_intersection_position(
-        self,
-        origin: &Vec3,
-        direction: &Vec3,
-        distance: f32,
-    ) -> Intersection {
-        let point = origin + direction * distance;
-        let normal = (point - self.center).normalize();
-        return Intersection {
-            point,
-            normal,
-            material: self.material,
-        };
-    }
-}
-
-pub fn scene_intersect(
-    origin: &Vec3,
-    direction: &Vec3,
-    spheres: &[Sphere],
-) -> Option<Intersection> {
+pub fn scene_intersect(scene: &Scene, origin: &Vec3, direction: &Vec3) -> Option<Intersection> {
     let mut closest_intersection: Option<Intersection> = None;
     let mut min_distance = f32::MAX;
-    for sphere in spheres {
-        if let Some(sphere_distance) = sphere.calculate_intersection_distance(origin, direction) {
+    for object in &scene.objects {
+        if let Some(intersection) = object.intersection(origin, direction) {
             // TODO: Add variable for render distance?
-            if sphere_distance < min_distance && sphere_distance < 1000f32 {
-                min_distance = sphere_distance;
-                closest_intersection = Some(sphere.calculate_intersection_position(
-                    origin,
-                    direction,
-                    sphere_distance,
-                ));
+            let intersection_distance = (intersection.point - origin).length();
+            if intersection_distance < min_distance && intersection_distance < 1000f32 {
+                min_distance = intersection_distance;
+                closest_intersection = Some(intersection);
             }
         }
     }
@@ -69,23 +22,22 @@ pub fn scene_intersect(
 }
 
 fn cast_ray(
+    scene: &Scene,
     origin: &Vec3,
     direction: &Vec3,
-    spheres: &[Sphere],
-    lights: &[Light],
     recursive_depth: u8,
     background: &Background,
 ) -> Rgb<u8> {
     let hit: Vec3;
     let normal: Vec3;
     let material: Material;
-    let background_color = calculate_background_color(direction, background);
+    let background_color = background_color(direction, background);
 
     if recursive_depth > 4 {
         return background_color;
     }
 
-    match scene_intersect(origin, direction, spheres) {
+    match scene_intersect(scene, origin, direction) {
         Some(intersection) => {
             hit = intersection.point;
             normal = intersection.normal;
@@ -94,19 +46,18 @@ fn cast_ray(
         None => return background_color,
     }
 
-    return calculate_color(
+    return color(
+        &scene,
         &material,
-        lights,
         &hit,
         &normal,
         &direction,
-        spheres,
         recursive_depth,
         background,
     );
 }
 
-fn calculate_background_color(direction: &Vec3, background: &Background) -> Rgb<u8> {
+fn background_color(direction: &Vec3, background: &Background) -> Rgb<u8> {
     if background.image.dimensions() == (0, 0) {
         return Rgb([50, 180, 200]);
     }
@@ -138,48 +89,38 @@ fn calculate_background_color(direction: &Vec3, background: &Background) -> Rgb<
         .to_rgb();
 }
 
-fn calculate_color(
+fn color(
+    scene: &Scene,
     material: &Material,
-    lights: &[Light],
     hit: &Vec3,
     normal: &Vec3,
     direction: &Vec3,
-    spheres: &[Sphere],
     recursive_depth: u8,
     background: &Background,
 ) -> Rgb<u8> {
-    let reflection_color = calculate_reflection_color(
-        direction,
-        normal,
-        hit,
-        spheres,
-        lights,
-        recursive_depth,
-        background,
-    );
-    let refraction_color = calculate_refraction_color(
+    let reflection_color =
+        reflection_color(scene, direction, normal, hit, recursive_depth, background);
+    let refraction_color = refraction_color(
+        scene,
         direction,
         normal,
         material,
         hit,
-        spheres,
-        lights,
         recursive_depth,
         background,
     );
 
-    let reflection_vector = calculate_vector_from_color(reflection_color);
-    let refraction_vector = calculate_vector_from_color(refraction_color);
+    let reflection_vector = vector_from_color(reflection_color);
+    let refraction_vector = vector_from_color(refraction_color);
 
     let mut diffuse_light_intensity = 0f32;
     let mut specular_light_intensity = 0f32;
-    let mut calculated_color = calculate_vector_from_color(material.diffuse_color);
-    for light in lights {
+    let mut calculated_color = vector_from_color(material.diffuse_color);
+    for light in &scene.lights {
         let light_direction = (light.position - hit).normalize();
         let light_distance = (light.position - hit).length();
-        let shadow_origin = calculate_ray_offset(&light_direction, normal, hit);
-        if let Some(shadow_intersection) =
-            scene_intersect(&shadow_origin, &light_direction, spheres)
+        let shadow_origin = ray_offset(&light_direction, normal, hit);
+        if let Some(shadow_intersection) = scene_intersect(scene, &shadow_origin, &light_direction)
         {
             if (shadow_intersection.point - shadow_origin).length() < light_distance {
                 continue;
@@ -189,7 +130,7 @@ fn calculate_color(
         specular_light_intensity += f32::powf(
             f32::max(
                 0f32,
-                -calculate_reflection_angle(&(-light_direction), &normal).dot(*direction),
+                -reflection_angle(&(-light_direction), &normal).dot(*direction),
             ),
             material.specular_exponent * light.intensity,
         )
@@ -207,7 +148,7 @@ fn calculate_color(
     ]);
 }
 
-fn calculate_vector_from_color(color: Rgb<u8>) -> Vec3 {
+fn vector_from_color(color: Rgb<u8>) -> Vec3 {
     return Vec3::new(
         color.0[0] as f32 / 255 as f32,
         color.0[1] as f32 / 255 as f32,
@@ -215,30 +156,27 @@ fn calculate_vector_from_color(color: Rgb<u8>) -> Vec3 {
     );
 }
 
-fn calculate_refraction_color(
+fn refraction_color(
+    scene: &Scene,
     incident: &Vec3,
     normal: &Vec3,
     material: &Material,
     hit: &Vec3,
-    spheres: &[Sphere],
-    lights: &[Light],
     recursive_depth: u8,
     background: &Background,
 ) -> Rgb<u8> {
-    let refraction_direction =
-        calculate_refraction_angle(incident, normal, material.refractive_index);
-    let refraction_origin = calculate_ray_offset(&refraction_direction, normal, hit);
+    let refraction_direction = refraction_angle(incident, normal, material.refractive_index);
+    let refraction_origin = ray_offset(&refraction_direction, normal, hit);
     return cast_ray(
+        scene,
         &refraction_origin,
         &refraction_direction,
-        spheres,
-        lights,
         recursive_depth + 1,
         background,
     );
 }
 
-fn calculate_ray_offset(direction: &Vec3, normal: &Vec3, hit: &Vec3) -> Vec3 {
+fn ray_offset(direction: &Vec3, normal: &Vec3, hit: &Vec3) -> Vec3 {
     let offset = 0.0001f32;
     return match direction.dot(*normal) < 0f32 {
         true => hit - offset,
@@ -246,16 +184,15 @@ fn calculate_ray_offset(direction: &Vec3, normal: &Vec3, hit: &Vec3) -> Vec3 {
     };
 }
 
-fn calculate_reflection_color(
+fn reflection_color(
+    scene: &Scene,
     direction: &Vec3,
     normal: &Vec3,
     hit: &Vec3,
-    spheres: &[Sphere],
-    lights: &[Light],
     recursive_depth: u8,
     background: &Background,
 ) -> Rgb<u8> {
-    let reflection_direction = calculate_reflection_angle(direction, normal);
+    let reflection_direction = reflection_angle(direction, normal);
     let reflection_origin: Vec3;
     if reflection_direction.dot(*normal) < 0f32 {
         reflection_origin = hit - 0.0001f32;
@@ -263,16 +200,15 @@ fn calculate_reflection_color(
         reflection_origin = hit + 0.0001f32;
     }
     return cast_ray(
+        scene,
         &reflection_origin,
         &reflection_direction,
-        spheres,
-        lights,
         recursive_depth + 1,
         background,
     );
 }
 
-pub fn render(spheres: &Vec<Sphere>, lights: &[Light], background: Background) {
+pub fn render(scene: Scene, background: Background) {
     const IMAGE_WIDTH: u32 = 1024;
     const IMAGE_HEIGHT: u32 = 768;
 
@@ -287,17 +223,17 @@ pub fn render(spheres: &Vec<Sphere>, lights: &[Light], background: Background) {
         let y_pos = -(2f32 * (y as f32 + 0.5) / IMAGE_HEIGHT as f32 - 1f32) * f32::tan(fov / 2f32);
 
         let direction = Vec3::normalize(Vec3::new(x_pos, y_pos, -1f32));
-        *pixel = cast_ray(&Vec3::ZERO, &direction, spheres, lights, 0, &background);
+        *pixel = cast_ray(&scene, &Vec3::ZERO, &direction, 0, &background);
     }
 
     frame_buffer.save("out.png").unwrap();
 }
 
-fn calculate_reflection_angle(incident: &Vec3, normal: &Vec3) -> Vec3 {
+fn reflection_angle(incident: &Vec3, normal: &Vec3) -> Vec3 {
     return incident - normal * 2f32 * incident.dot(*normal);
 }
 
-fn calculate_refraction_angle(incident: &Vec3, normal: &Vec3, refractive_index: f32) -> Vec3 {
+fn refraction_angle(incident: &Vec3, normal: &Vec3, refractive_index: f32) -> Vec3 {
     let mut cosi = -f32::max(-1f32, f32::min(1f32, incident.dot(*normal)));
     let mut etai = 1f32;
     let mut etat = refractive_index;

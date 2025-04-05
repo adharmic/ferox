@@ -1,9 +1,9 @@
 use std::{f32::consts::PI, mem::swap};
 
 use glam::Vec3;
-use image::{GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
+use image::{GenericImageView, ImageBuffer, Pixel, RgbImage};
 
-use crate::structures::{Background, Intersection, Material, Scene};
+use crate::structures::{Background, Color, Intersection, Material, Scene};
 
 pub fn scene_intersect(scene: &Scene, origin: &Vec3, direction: &Vec3) -> Option<Intersection> {
     let mut closest_intersection: Option<Intersection> = None;
@@ -27,7 +27,7 @@ fn cast_ray(
     direction: &Vec3,
     recursive_depth: u8,
     background: &Background,
-) -> Rgb<u8> {
+) -> Color {
     let hit: Vec3;
     let normal: Vec3;
     let material: Material;
@@ -57,9 +57,13 @@ fn cast_ray(
     );
 }
 
-fn background_color(direction: &Vec3, background: &Background) -> Rgb<u8> {
+fn background_color(direction: &Vec3, background: &Background) -> Color {
     if background.image.dimensions() == (0, 0) {
-        return Rgb([50, 180, 200]);
+        return Color {
+            r: 50,
+            g: 180,
+            b: 200,
+        };
     }
 
     let norm_direction = direction.normalize();
@@ -83,10 +87,16 @@ fn background_color(direction: &Vec3, background: &Background) -> Rgb<u8> {
     let tex_x = u * (tex_width - 1) as f32;
     let tex_y = v * (tex_height - 1) as f32; // Try: (1.0 - v) * (tex_height - 1) as f32; if flipped
 
-    return background
+    let pixel_color = background
         .image
         .get_pixel(tex_x as u32, tex_y as u32)
         .to_rgb();
+
+    return Color {
+        r: pixel_color.0[0],
+        g: pixel_color.0[1],
+        b: pixel_color.0[2],
+    };
 }
 
 fn color(
@@ -97,7 +107,7 @@ fn color(
     direction: &Vec3,
     recursive_depth: u8,
     background: &Background,
-) -> Rgb<u8> {
+) -> Color {
     let reflection_color =
         reflection_color(scene, direction, normal, hit, recursive_depth, background);
     let refraction_color = refraction_color(
@@ -110,12 +120,12 @@ fn color(
         background,
     );
 
-    let reflection_vector = vector_from_color(reflection_color);
-    let refraction_vector = vector_from_color(refraction_color);
+    let reflection_vector = reflection_color.as_vector();
+    let refraction_vector = refraction_color.as_vector();
 
     let mut diffuse_light_intensity = 0f32;
     let mut specular_light_intensity = 0f32;
-    let mut calculated_color = vector_from_color(material.diffuse_color);
+    let mut calculated_color = material.diffuse_color.as_vector();
     for light in &scene.lights {
         let light_direction = (light.position - hit).normalize();
         let light_distance = (light.position - hit).length();
@@ -141,19 +151,7 @@ fn color(
         + reflection_vector * material.albedo[2]
         + refraction_vector * material.albedo[3];
 
-    return Rgb([
-        u8::clamp((calculated_color[0] * 255f32) as u8, 0, 255),
-        u8::clamp((calculated_color[1] * 255f32) as u8, 0, 255),
-        u8::clamp((calculated_color[2] * 255f32) as u8, 0, 255),
-    ]);
-}
-
-fn vector_from_color(color: Rgb<u8>) -> Vec3 {
-    return Vec3::new(
-        color.0[0] as f32 / 255 as f32,
-        color.0[1] as f32 / 255 as f32,
-        color.0[2] as f32 / 255 as f32,
-    );
+    return Color::from_vector(calculated_color);
 }
 
 fn refraction_color(
@@ -164,7 +162,7 @@ fn refraction_color(
     hit: &Vec3,
     recursive_depth: u8,
     background: &Background,
-) -> Rgb<u8> {
+) -> Color {
     let refraction_direction = refraction_angle(incident, normal, material.refractive_index);
     let refraction_origin = ray_offset(&refraction_direction, normal, hit);
     return cast_ray(
@@ -191,7 +189,7 @@ fn reflection_color(
     hit: &Vec3,
     recursive_depth: u8,
     background: &Background,
-) -> Rgb<u8> {
+) -> Color {
     let reflection_direction = reflection_angle(direction, normal);
     let reflection_origin: Vec3;
     if reflection_direction.dot(*normal) < 0f32 {
@@ -223,10 +221,11 @@ pub fn render(scene: Scene, background: Background) {
         let y_pos = -(2f32 * (y as f32 + 0.5) / IMAGE_HEIGHT as f32 - 1f32) * f32::tan(fov / 2f32);
 
         let direction = Vec3::normalize(Vec3::new(x_pos, y_pos, -1f32));
-        *pixel = cast_ray(&scene, &Vec3::ZERO, &direction, 0, &background);
+        *pixel = cast_ray(&scene, &Vec3::ZERO, &direction, 0, &background).as_rgb();
     }
 
     frame_buffer.save("out.png").unwrap();
+    println!("Image has been rendered and saved to `out.png`!");
 }
 
 fn reflection_angle(incident: &Vec3, normal: &Vec3) -> Vec3 {

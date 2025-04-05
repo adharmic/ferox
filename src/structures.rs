@@ -16,37 +16,12 @@ pub struct Light {
     pub intensity: f32,
 }
 
-impl Light {
-    pub fn new(position: Vec3, intensity: f32) -> Light {
-        Light {
-            position,
-            intensity,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Material {
-    pub diffuse_color: Rgb<u8>,
+    pub diffuse_color: Color,
     pub albedo: Vec4,
     pub specular_exponent: f32,
     pub refractive_index: f32,
-}
-
-impl Material {
-    pub fn new(
-        color: Rgb<u8>,
-        albedo: Vec4,
-        specular_exponent: f32,
-        refractive_index: f32,
-    ) -> Material {
-        Material {
-            diffuse_color: color,
-            albedo,
-            specular_exponent,
-            refractive_index,
-        }
-    }
 }
 
 pub struct Intersection {
@@ -59,27 +34,11 @@ pub struct Background {
     pub image: DynamicImage,
 }
 
-impl Background {
-    pub fn new(image: DynamicImage) -> Background {
-        Background { image }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
     pub material: Material,
-}
-
-impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Material) -> Sphere {
-        Sphere {
-            center,
-            radius,
-            material,
-        }
-    }
 }
 
 impl Traceable for Sphere {
@@ -109,6 +68,34 @@ impl Traceable for Sphere {
             normal: intersection_normal,
             material: self.material,
         });
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+impl Color {
+    pub fn from_vector(vector: Vec3) -> Color {
+        Color {
+            r: (vector.x * 255f32) as u8,
+            g: (vector.y * 255f32) as u8,
+            b: (vector.z * 255f32) as u8,
+        }
+    }
+    pub fn as_vector(&self) -> Vec3 {
+        return Vec3::new(
+            self.r as f32 / 255f32,
+            self.g as f32 / 255f32,
+            self.b as f32 / 255f32,
+        );
+    }
+
+    pub fn as_rgb(&self) -> Rgb<u8> {
+        return Rgb([self.r, self.g, self.b]);
     }
 }
 

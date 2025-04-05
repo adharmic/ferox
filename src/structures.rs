@@ -81,9 +81,9 @@ pub struct Color {
 impl Color {
     pub fn from_vector(vector: Vec3) -> Color {
         Color {
-            r: (vector.x * 255f32) as u8,
-            g: (vector.y * 255f32) as u8,
-            b: (vector.z * 255f32) as u8,
+            r: (f32::clamp(vector.x, 0f32, 1f32) * 255f32) as u8,
+            g: (f32::clamp(vector.y, 0f32, 1f32) * 255f32) as u8,
+            b: (f32::clamp(vector.z, 0f32, 1f32) * 255f32) as u8,
         }
     }
     pub fn as_vector(&self) -> Vec3 {

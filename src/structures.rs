@@ -1,10 +1,6 @@
 use glam::{Vec3, Vec4};
 use image::{DynamicImage, Rgb};
 
-// TODO: Create a Scene struct which will hold meshes and lights.
-// The scene_intersect function should be implemented for this struct as it will have direct access to all scene objects.
-// Can support functions for adding/removing lights and objects.
-
 pub struct Scene {
     pub lights: Vec<Light>,
     pub objects: Vec<Box<dyn Traceable>>,
@@ -115,3 +111,30 @@ impl Traceable for Sphere {
         });
     }
 }
+
+// TODO: Finish implementing plane, box, and triangle-ray intersections.
+// pub struct Plane {
+//     point: Vec3,
+//     normal: Vec3,
+//     material: Material,
+// }
+
+// impl Plane {
+//     pub fn new(point: Vec3, normal: Vec3, material: Material) -> Plane {
+//         Plane {
+//             point,
+//             normal,
+//             material,
+//         }
+//     }
+
+//     pub fn intersects(&self, origin: &Vec3, direction: &Vec3) -> bool {
+//         let denominator = self.normal.dot(*direction);
+//         if denominator > 0.0001f32 {
+//             let hit = self.point - origin;
+//             let distance = hit.dot(self.normal) / denominator;
+//             return distance > 0f32;
+//         }
+//         return false;
+//     }
+// }

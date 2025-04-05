@@ -4,6 +4,7 @@ use image::{DynamicImage, Rgb};
 pub struct Scene {
     pub lights: Vec<Light>,
     pub objects: Vec<Box<dyn Traceable>>,
+    pub background: Option<DynamicImage>,
 }
 
 pub trait Traceable {
@@ -28,10 +29,6 @@ pub struct Intersection {
     pub point: Vec3,
     pub normal: Vec3,
     pub material: Material,
-}
-
-pub struct Background {
-    pub image: DynamicImage,
 }
 
 #[derive(Debug, Clone, Copy)]

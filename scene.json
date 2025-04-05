@@ -1,0 +1,36 @@
+{
+  "objects": [
+    {
+      "name": "sphere",
+      "radius": 2,
+      "center": {
+        "x": -3,
+        "y": 0,
+        "z": -8
+      },
+      "material": {
+        "diffuse_color": {
+          "r": 102,
+          "g": 102,
+          "b": 76
+        },
+        "albedo": {
+          "x": 0.6,
+          "y": 0.3,
+          "z": 0.05,
+          "w": 0
+        }
+      }
+    }
+  ],
+  "lights": [
+    {
+      "position": {
+        "x": 5,
+        "y": 5,
+        "z": -2
+      },
+      "intensity": 1.5
+    }
+  ]
+}

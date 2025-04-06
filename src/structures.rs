@@ -1,5 +1,6 @@
 use glam::{Vec3, Vec4};
 use image::{DynamicImage, Rgb};
+use serde::{Deserialize, Serialize};
 
 pub struct Scene {
     pub lights: Vec<Light>,
@@ -11,13 +12,13 @@ pub trait Traceable {
     fn intersection(&self, origin: &Vec3, direction: &Vec3) -> Option<Intersection>;
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Light {
     pub position: Vec3,
     pub intensity: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Material {
     pub diffuse_color: Color,
     pub albedo: Vec4,
@@ -68,7 +69,7 @@ impl Traceable for Sphere {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Color {
     pub r: u8,
     pub g: u8,

@@ -3,33 +3,35 @@
     {
       "name": "sphere",
       "radius": 2,
-      "center": {
-        "x": -3,
-        "y": 0,
-        "z": -8
-      },
+      "center": [
+        -3,
+        0,
+        -8
+      ],
       "material": {
         "diffuse_color": {
           "r": 102,
           "g": 102,
           "b": 76
         },
-        "albedo": {
-          "x": 0.6,
-          "y": 0.3,
-          "z": 0.05,
-          "w": 0
-        }
+        "albedo": [
+          0.6,
+          0.3,
+          0.05,
+          0
+        ],
+        "specular_exponent": 50,
+        "refractive_index": 1
       }
     }
   ],
   "lights": [
     {
-      "position": {
-        "x": 5,
-        "y": 5,
-        "z": -2
-      },
+      "position": [
+        5,
+        5,
+        -2
+      ],
       "intensity": 1.5
     }
   ]

@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, ops::Deref, path::PathBuf};
 
 use clap::Parser;
 use glam::{Vec3, Vec4};
@@ -50,14 +50,41 @@ pub fn initialize() -> ExecutionContext {
 }
 
 fn parse_scene_json(scene_file_path: &std::path::Path) -> Scene {
-    // TODO: Finish me!
     // TODO: If any errors while trying to read the scene JSON, return the default scene.
     let scene_json = File::open(scene_file_path).expect("Scene file not found!");
     let raw_data: Value =
         serde_json::from_reader(scene_json).expect("Scene file is not valid JSON.");
-    println!("{raw_data}");
+    let lights: Vec<Light> = serde_json::from_value(raw_data["lights"].clone())
+        .expect("Scene file does not contain any lights.");
+    let objects_json: Vec<Value> = serde_json::from_value(raw_data["objects"].clone())
+        .expect("Scene file does not contain any objects.");
 
-    return default_scene();
+    let mut objects: Vec<Box<dyn Traceable>> = Vec::new();
+    for object in objects_json {
+        let object_name: String = serde_json::from_value(object["name"].clone()).unwrap();
+        match object_name.deref() {
+            "sphere" => {
+                let radius: f32 = serde_json::from_value(object["radius"].clone()).unwrap();
+                let center: Vec3 = serde_json::from_value(object["center"].clone()).unwrap();
+                let material: Material =
+                    serde_json::from_value(object["material"].clone()).unwrap();
+                objects.push(Box::new(Sphere {
+                    center,
+                    radius,
+                    material,
+                }));
+            }
+            _ => {
+                println!("Unknown object: {}", object_name)
+            }
+        }
+    }
+
+    return Scene {
+        lights,
+        objects,
+        background: None,
+    };
 }
 
 fn load_background(background: &str) -> DynamicImage {

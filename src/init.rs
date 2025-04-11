@@ -5,7 +5,7 @@ use glam::{Vec3, Vec4};
 use image::{DynamicImage, ImageReader};
 use serde_json::Value;
 
-use crate::structures::{Color, Light, Material, Scene, Sphere, Traceable};
+use crate::structures::{AABB, Color, Light, Material, Scene, Sphere, Traceable};
 
 #[derive(Parser)]
 struct Arguments {
@@ -51,6 +51,7 @@ pub fn initialize() -> ExecutionContext {
 
 fn parse_scene_json(scene_file_path: &std::path::Path) -> Scene {
     // TODO: If any errors while trying to read the scene JSON, return the default scene.
+    // replace expects with unwrap_or and handle more gracefully
     let scene_json = File::open(scene_file_path).expect("Scene file not found!");
     let raw_data: Value =
         serde_json::from_reader(scene_json).expect("Scene file is not valid JSON.");
@@ -73,6 +74,13 @@ fn parse_scene_json(scene_file_path: &std::path::Path) -> Scene {
                     radius,
                     material,
                 }));
+            }
+            "box" => {
+                let min: Vec3 = serde_json::from_value(object["min"].clone()).unwrap();
+                let max: Vec3 = serde_json::from_value(object["max"].clone()).unwrap();
+                let material: Material =
+                    serde_json::from_value(object["material"].clone()).unwrap();
+                objects.push(Box::new(AABB { min, max, material }));
             }
             _ => {
                 println!("Unknown object: {}", object_name)

@@ -1,11 +1,39 @@
 {
   "objects": [
     {
+      "name": "box",
+      "min": [
+        -3,
+        0,
+        -8
+      ],
+      "max": [
+        -4,
+        -1,
+        -9
+      ],
+      "material": {
+        "diffuse_color": {
+          "r": 102,
+          "g": 102,
+          "b": 76
+        },
+        "albedo": [
+          0.6,
+          0.3,
+          0.05,
+          0
+        ],
+        "specular_exponent": 50,
+        "refractive_index": 1
+      }
+    },
+    {
       "name": "sphere",
       "radius": 2,
       "center": [
         -3,
-        0,
+        5,
         -8
       ],
       "material": {

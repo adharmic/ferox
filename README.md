@@ -28,5 +28,7 @@ I am planning on adding support for JSON-based scene loading and overrideable ou
 - [ ] Refactor codebase for readability
 - [x] Loadable scene configurations
 - [x] CLI image generation and output options
+- [ ] Multi-threading
 - [ ] GUI with parametric support
 - [ ] Real-time calculations and camera movement
+- [ ] Antialiasing

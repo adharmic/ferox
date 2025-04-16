@@ -1,9 +1,14 @@
-use std::{fs::File, ops::Deref, path::PathBuf};
+use std::{
+    fs::{self, File},
+    ops::Deref,
+    path::PathBuf,
+};
 
 use clap::Parser;
 use glam::{Vec3, Vec4};
 use image::{DynamicImage, ImageReader};
 use serde_json::Value;
+use wavefront_obj::obj::{self, Primitive};
 
 use crate::structures::{AABB, Color, Light, Material, Scene, Sphere, Traceable, Triangle};
 
@@ -107,7 +112,7 @@ fn load_background(background: &str) -> DynamicImage {
 fn default_scene() -> Scene {
     let mut objects: Vec<Box<dyn Traceable>> = Vec::new();
     let mut lights = Vec::new();
-    let ivory = Material {
+    let _ivory = Material {
         diffuse_color: Color {
             r: 102,
             g: 102,
@@ -127,7 +132,7 @@ fn default_scene() -> Scene {
         specular_exponent: 10f32,
         refractive_index: 1f32,
     };
-    let mirror = Material {
+    let _mirror = Material {
         diffuse_color: Color {
             r: 255,
             g: 255,
@@ -137,7 +142,7 @@ fn default_scene() -> Scene {
         specular_exponent: 1425f32,
         refractive_index: 1f32,
     };
-    let glass = Material {
+    let _glass = Material {
         diffuse_color: Color {
             r: 150,
             g: 175,
@@ -178,17 +183,47 @@ fn default_scene() -> Scene {
     //     material: glass,
     // }));
 
-    objects.push(Box::new(Triangle {
-        v0: Vec3::new(-3f32, 0f32, -7f32),
-        v1: Vec3::new(0f32, 3f32, -5f32),
-        v2: Vec3::new(3f32, 0f32, -6f32),
-        material: glass,
-    }));
+    // objects.push(Box::new(Triangle {
+    //     v0: Vec3::new(0f32, 3f32, -8f32),
+    //     v1: Vec3::new(-3f32, 0f32, -8f32),
+    //     v2: Vec3::new(3f32, 0f32, -8f32),
+    //     material: mirror,
+    // }));
+
+    let model_read = fs::read_to_string("model.obj").unwrap();
+    let model = obj::parse(model_read).unwrap();
+    model.objects.iter().for_each(|object| {
+        object.geometry.iter().for_each(|geo| {
+            geo.shapes.iter().for_each(|shape| {
+                if let Primitive::Triangle(x, y, z) = shape.primitive {
+                    objects.push(Box::new(Triangle {
+                        v0: Vec3::new(
+                            object.vertices[x.0].x as f32,
+                            object.vertices[x.0].y as f32,
+                            object.vertices[x.0].z as f32 - 2f32,
+                        ),
+                        v1: Vec3::new(
+                            object.vertices[y.0].x as f32,
+                            object.vertices[y.0].y as f32,
+                            object.vertices[y.0].z as f32 - 2f32,
+                        ),
+                        v2: Vec3::new(
+                            object.vertices[z.0].x as f32,
+                            object.vertices[z.0].y as f32,
+                            object.vertices[z.0].z as f32 - 2f32,
+                        ),
+                        material: red,
+                    }));
+                }
+            });
+        });
+    });
 
     lights.push(Light {
         position: Vec3::new(5f32, 5f32, -2f32),
         intensity: 1.5,
     });
+
     return Scene {
         lights,
         objects,

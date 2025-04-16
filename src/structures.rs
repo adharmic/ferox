@@ -110,46 +110,33 @@ impl Traceable for Triangle {
     fn intersection(&self, origin: &Vec3, direction: &Vec3) -> Option<Intersection> {
         let v0v1 = self.v1 - self.v0;
         let v0v2 = self.v2 - self.v0;
-        let normal = v0v1.cross(v0v2);
-
-        let normal_dot_direction = normal.dot(*direction);
-        if normal_dot_direction.abs() < EPSILON {
+        let pvec = direction.cross(v0v2);
+        let determinant = v0v1.dot(pvec);
+        if determinant.abs() < EPSILON {
+            return None;
+        }
+        let inverse_determinant = 1f32 / determinant;
+        let tvec = origin - self.v0;
+        let u = tvec.dot(pvec) * inverse_determinant;
+        if u < 0f32 || u > 1f32 {
             return None;
         }
 
-        let d = -normal.dot(self.v0);
-        let t = -(normal.dot(*origin) + d) / normal_dot_direction;
-
-        if t < 0f32 {
-            return None;
-        }
-        let p = origin + t * direction;
-
-        let v0p = p - self.v0;
-        let mut ne = v0v1.cross(v0p);
-
-        if normal.dot(ne) < 0f32 {
+        let qvec = tvec.cross(v0v1);
+        let v = direction.dot(qvec) * inverse_determinant;
+        if v < 0f32 || (u + v) > 1f32 {
             return None;
         }
 
-        let v1v2 = self.v2 - self.v1;
-        let v1p = p - self.v1;
+        let t = v0v2.dot(qvec) * inverse_determinant;
 
-        ne = v1v2.cross(v1p);
-        if normal.dot(ne) < 0f32 {
-            return None;
-        }
-
-        let v2v0 = self.v0 - self.v2;
-        let v2p = p - self.v2;
-        ne = v2v0.cross(v2p);
-        if normal.dot(ne) < 0f32 {
+        if t < EPSILON {
             return None;
         }
 
         Some(Intersection {
-            point: p,
-            normal,
+            point: origin + t * direction,
+            normal: v0v2.cross(v0v1).normalize(),
             material: self.material,
         })
     }

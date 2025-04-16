@@ -2,6 +2,8 @@ use glam::{Vec3, Vec4};
 use image::{DynamicImage, Rgb};
 use serde::{Deserialize, Serialize};
 
+pub const EPSILON: f32 = 1e-4;
+
 pub struct Scene {
     pub lights: Vec<Light>,
     pub objects: Vec<Box<dyn Traceable>>,
@@ -97,6 +99,62 @@ impl Color {
     }
 }
 
+pub struct Triangle {
+    pub v0: Vec3,
+    pub v1: Vec3,
+    pub v2: Vec3,
+    pub material: Material,
+}
+
+impl Traceable for Triangle {
+    fn intersection(&self, origin: &Vec3, direction: &Vec3) -> Option<Intersection> {
+        let v0v1 = self.v1 - self.v0;
+        let v0v2 = self.v2 - self.v0;
+        let normal = v0v1.cross(v0v2);
+
+        let normal_dot_direction = normal.dot(*direction);
+        if normal_dot_direction.abs() < EPSILON {
+            return None;
+        }
+
+        let d = -normal.dot(self.v0);
+        let t = -(normal.dot(*origin) + d) / normal_dot_direction;
+
+        if t < 0f32 {
+            return None;
+        }
+        let p = origin + t * direction;
+
+        let v0p = p - self.v0;
+        let mut ne = v0v1.cross(v0p);
+
+        if normal.dot(ne) < 0f32 {
+            return None;
+        }
+
+        let v1v2 = self.v2 - self.v1;
+        let v1p = p - self.v1;
+
+        ne = v1v2.cross(v1p);
+        if normal.dot(ne) < 0f32 {
+            return None;
+        }
+
+        let v2v0 = self.v0 - self.v2;
+        let v2p = p - self.v2;
+        ne = v2v0.cross(v2p);
+        if normal.dot(ne) < 0f32 {
+            return None;
+        }
+
+        Some(Intersection {
+            point: p,
+            normal,
+            material: self.material,
+        })
+    }
+}
+
 pub struct AABB {
     pub min: Vec3,
     pub max: Vec3,
@@ -156,7 +214,7 @@ impl Traceable for AABB {
         let point_relative_to_center = hit_point - center;
         let half_extents = (self.max - self.min) * 0.5;
 
-        let epsilon = 1e-4;
+        let epsilon = EPSILON;
 
         let mut normal = Vec3::ZERO;
 

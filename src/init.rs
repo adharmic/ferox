@@ -5,7 +5,7 @@ use glam::{Vec3, Vec4};
 use image::{DynamicImage, ImageReader};
 use serde_json::Value;
 
-use crate::structures::{AABB, Color, Light, Material, Scene, Sphere, Traceable};
+use crate::structures::{AABB, Color, Light, Material, Scene, Sphere, Traceable, Triangle};
 
 #[derive(Parser)]
 struct Arguments {
@@ -147,34 +147,41 @@ fn default_scene() -> Scene {
         specular_exponent: 125f32,
         refractive_index: 1.5f32,
     };
-    objects.push(Box::new(Sphere {
-        center: Vec3::new(-3f32, 0f32, -8f32),
-        radius: 2f32,
-        material: ivory,
-    }));
-    objects.push(Box::new(Sphere {
-        center: Vec3::new(-1f32, -1.5f32, -6f32),
-        radius: 2f32,
-        material: ivory,
-    }));
-    objects.push(Box::new(Sphere {
-        center: Vec3::new(1.5f32, -0.5f32, -9f32),
-        radius: 2f32,
-        material: red,
-    }));
-    objects.push(Box::new(Sphere {
-        center: Vec3::new(-1f32, 3.5f32, -7f32),
-        radius: 2f32,
-        material: red,
-    }));
-    objects.push(Box::new(Sphere {
-        center: Vec3::new(3f32, -3f32, -6f32),
-        radius: 2f32,
-        material: mirror,
-    }));
-    objects.push(Box::new(Sphere {
-        center: Vec3::new(-3f32, 3f32, -5f32),
-        radius: 2f32,
+    // objects.push(Box::new(Sphere {
+    //     center: Vec3::new(-3f32, 0f32, -8f32),
+    //     radius: 2f32,
+    //     material: ivory,
+    // }));
+    // objects.push(Box::new(Sphere {
+    //     center: Vec3::new(-1f32, -1.5f32, -6f32),
+    //     radius: 2f32,
+    //     material: ivory,
+    // }));
+    // objects.push(Box::new(Sphere {
+    //     center: Vec3::new(1.5f32, -0.5f32, -9f32),
+    //     radius: 2f32,
+    //     material: red,
+    // }));
+    // objects.push(Box::new(Sphere {
+    //     center: Vec3::new(-1f32, 3.5f32, -7f32),
+    //     radius: 2f32,
+    //     material: red,
+    // }));
+    // objects.push(Box::new(Sphere {
+    //     center: Vec3::new(3f32, -3f32, -6f32),
+    //     radius: 2f32,
+    //     material: mirror,
+    // }));
+    // objects.push(Box::new(Sphere {
+    //     center: Vec3::new(-3f32, 3f32, -5f32),
+    //     radius: 2f32,
+    //     material: glass,
+    // }));
+
+    objects.push(Box::new(Triangle {
+        v0: Vec3::new(-3f32, 0f32, -7f32),
+        v1: Vec3::new(0f32, 3f32, -5f32),
+        v2: Vec3::new(3f32, 0f32, -6f32),
         material: glass,
     }));
 

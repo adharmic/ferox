@@ -8,7 +8,7 @@ use clap::Parser;
 use glam::{Vec3, Vec4};
 use image::{DynamicImage, ImageReader};
 use serde_json::Value;
-use wavefront_obj::obj::{self, Primitive};
+use wavefront_obj::obj::{self, ObjSet, Primitive};
 
 use crate::structures::{AABB, Color, Light, Material, Scene, Sphere, Traceable, Triangle};
 
@@ -192,32 +192,16 @@ fn default_scene() -> Scene {
 
     let model_read = fs::read_to_string("model.obj").unwrap();
     let model = obj::parse(model_read).unwrap();
-    model.objects.iter().for_each(|object| {
-        object.geometry.iter().for_each(|geo| {
-            geo.shapes.iter().for_each(|shape| {
-                if let Primitive::Triangle(x, y, z) = shape.primitive {
-                    objects.push(Box::new(Triangle {
-                        v0: Vec3::new(
-                            object.vertices[x.0].x as f32,
-                            object.vertices[x.0].y as f32,
-                            object.vertices[x.0].z as f32 - 2f32,
-                        ),
-                        v1: Vec3::new(
-                            object.vertices[y.0].x as f32,
-                            object.vertices[y.0].y as f32,
-                            object.vertices[y.0].z as f32 - 2f32,
-                        ),
-                        v2: Vec3::new(
-                            object.vertices[z.0].x as f32,
-                            object.vertices[z.0].y as f32,
-                            object.vertices[z.0].z as f32 - 2f32,
-                        ),
-                        material: red,
-                    }));
-                }
-            });
-        });
-    });
+    let dragon_read = fs::read_to_string("dragon.obj").unwrap();
+    let dragon_model = obj::parse(dragon_read).unwrap();
+
+    add_triangulated_mesh(model, &mut objects, red, Vec3::new(2f32, 0f32, 2f32));
+    add_triangulated_mesh(
+        dragon_model,
+        &mut objects,
+        red,
+        Vec3::new(-2f32, 0f32, 2f32),
+    );
 
     lights.push(Light {
         position: Vec3::new(5f32, 5f32, -2f32),
@@ -229,4 +213,38 @@ fn default_scene() -> Scene {
         objects,
         background: None,
     };
+}
+
+pub fn add_triangulated_mesh(
+    model: ObjSet,
+    objects: &mut Vec<Box<dyn Traceable>>,
+    default_mat: Material,
+    offset: Vec3,
+) {
+    model.objects.iter().for_each(|object| {
+        object.geometry.iter().for_each(|geo| {
+            geo.shapes.iter().for_each(|shape| {
+                if let Primitive::Triangle(x, y, z) = shape.primitive {
+                    objects.push(Box::new(Triangle {
+                        v0: Vec3::new(
+                            object.vertices[x.0].x as f32 - offset.x,
+                            object.vertices[x.0].y as f32 - offset.y,
+                            object.vertices[x.0].z as f32 - offset.z,
+                        ),
+                        v1: Vec3::new(
+                            object.vertices[y.0].x as f32 - offset.x,
+                            object.vertices[y.0].y as f32 - offset.y,
+                            object.vertices[y.0].z as f32 - offset.z,
+                        ),
+                        v2: Vec3::new(
+                            object.vertices[z.0].x as f32 - offset.x,
+                            object.vertices[z.0].y as f32 - offset.y,
+                            object.vertices[z.0].z as f32 - offset.z,
+                        ),
+                        material: default_mat,
+                    }));
+                }
+            });
+        });
+    });
 }

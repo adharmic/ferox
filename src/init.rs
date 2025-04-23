@@ -5,12 +5,12 @@ use std::{
 };
 
 use clap::Parser;
-use glam::{Vec3, Vec4};
+use glam::Vec3;
 use image::{DynamicImage, ImageReader};
 use serde_json::Value;
 use wavefront_obj::obj::{self, ObjSet, Primitive};
 
-use crate::structures::{AABB, Color, Light, Material, Scene, Sphere, Traceable, Triangle};
+use crate::structures::{AABB, Light, Material, Scene, Sphere, Traceable, Triangle};
 
 #[derive(Parser)]
 struct Arguments {
@@ -112,99 +112,58 @@ fn load_background(background: &str) -> DynamicImage {
 fn default_scene() -> Scene {
     let mut objects: Vec<Box<dyn Traceable>> = Vec::new();
     let mut lights = Vec::new();
-    let _ivory = Material {
-        diffuse_color: Color {
-            r: 102,
-            g: 102,
-            b: 76,
-        },
-        albedo: Vec4::new(0.6, 0.3, 0.05, 0.0),
-        specular_exponent: 50f32,
-        refractive_index: 1f32,
-    };
-    let red = Material {
-        diffuse_color: Color {
-            r: 76,
-            g: 25,
-            b: 25,
-        },
-        albedo: Vec4::new(0.9, 0.1, 0.0, 0.0),
-        specular_exponent: 10f32,
-        refractive_index: 1f32,
-    };
-    let _mirror = Material {
-        diffuse_color: Color {
-            r: 255,
-            g: 255,
-            b: 255,
-        },
-        albedo: Vec4::new(0.0, 10.0, 0.8, 0.0),
-        specular_exponent: 1425f32,
-        refractive_index: 1f32,
-    };
-    let _glass = Material {
-        diffuse_color: Color {
-            r: 150,
-            g: 175,
-            b: 200,
-        },
-        albedo: Vec4::new(0.0, 0.5, 0.1, 0.8),
-        specular_exponent: 125f32,
-        refractive_index: 1.5f32,
-    };
-    // objects.push(Box::new(Sphere {
-    //     center: Vec3::new(-3f32, 0f32, -8f32),
-    //     radius: 2f32,
-    //     material: ivory,
-    // }));
-    // objects.push(Box::new(Sphere {
-    //     center: Vec3::new(-1f32, -1.5f32, -6f32),
-    //     radius: 2f32,
-    //     material: ivory,
-    // }));
-    // objects.push(Box::new(Sphere {
-    //     center: Vec3::new(1.5f32, -0.5f32, -9f32),
-    //     radius: 2f32,
-    //     material: red,
-    // }));
-    // objects.push(Box::new(Sphere {
-    //     center: Vec3::new(-1f32, 3.5f32, -7f32),
-    //     radius: 2f32,
-    //     material: red,
-    // }));
-    // objects.push(Box::new(Sphere {
-    //     center: Vec3::new(3f32, -3f32, -6f32),
-    //     radius: 2f32,
-    //     material: mirror,
-    // }));
-    // objects.push(Box::new(Sphere {
-    //     center: Vec3::new(-3f32, 3f32, -5f32),
-    //     radius: 2f32,
-    //     material: glass,
-    // }));
 
-    // objects.push(Box::new(Triangle {
-    //     v0: Vec3::new(0f32, 3f32, -8f32),
-    //     v1: Vec3::new(-3f32, 0f32, -8f32),
-    //     v2: Vec3::new(3f32, 0f32, -8f32),
-    //     material: mirror,
-    // }));
+    objects.push(Box::new(Sphere {
+        center: Vec3::new(2.5f32, 0.3f32, -2f32),
+        radius: 1f32,
+        material: Material::MIRROR,
+    }));
+    objects.push(Box::new(Sphere {
+        center: Vec3::new(-2.5f32, 0.3f32, -2f32),
+        radius: 1f32,
+        material: Material::GLASS,
+    }));
 
-    let model_read = fs::read_to_string("model.obj").unwrap();
-    let model = obj::parse(model_read).unwrap();
-    let dragon_read = fs::read_to_string("dragon.obj").unwrap();
-    let dragon_model = obj::parse(dragon_read).unwrap();
+    objects.push(Box::new(AABB {
+        min: Vec3::new(-5f32, -1f32, -5f32),
+        max: Vec3::new(15f32, -0.54f32, 15f32),
+        material: Material::GREEN,
+    }));
 
-    add_triangulated_mesh(model, &mut objects, red, Vec3::new(2f32, 0f32, 2f32));
+    let goblet_obj = fs::read_to_string("goblet.obj").unwrap();
+    let goblet = obj::parse(goblet_obj).unwrap();
+    let seashell_obj = fs::read_to_string("seashell.obj").unwrap();
+    let seashell = obj::parse(seashell_obj).unwrap();
+    let boat_obj = fs::read_to_string("boat.obj").unwrap();
+    let boat = obj::parse(boat_obj).unwrap();
+
     add_triangulated_mesh(
-        dragon_model,
+        &goblet,
         &mut objects,
-        red,
-        Vec3::new(-2f32, 0f32, 2f32),
+        Material::PURPLE,
+        Vec3::new(0.3f32, 0f32, 2f32),
+    );
+
+    add_triangulated_mesh(
+        &seashell,
+        &mut objects,
+        Material::IVORY,
+        Vec3::new(-0.1f32, 0.5f32, 1f32),
+    );
+
+    add_triangulated_mesh(
+        &boat,
+        &mut objects,
+        Material::ORANGE,
+        Vec3::new(1f32, 0.55f32, 1f32),
     );
 
     lights.push(Light {
-        position: Vec3::new(5f32, 5f32, -2f32),
+        position: Vec3::new(-3f32, 4f32, -1f32),
+        intensity: 1.5,
+    });
+    lights.push(Light {
+        position: Vec3::new(2f32, 2f32, -1f32),
         intensity: 1.5,
     });
 
@@ -216,9 +175,9 @@ fn default_scene() -> Scene {
 }
 
 pub fn add_triangulated_mesh(
-    model: ObjSet,
+    model: &ObjSet,
     objects: &mut Vec<Box<dyn Traceable>>,
-    default_mat: Material,
+    material: Material,
     offset: Vec3,
 ) {
     model.objects.iter().for_each(|object| {
@@ -241,7 +200,7 @@ pub fn add_triangulated_mesh(
                             object.vertices[z.0].y as f32 - offset.y,
                             object.vertices[z.0].z as f32 - offset.z,
                         ),
-                        material: default_mat,
+                        material,
                     }));
                 }
             });

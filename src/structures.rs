@@ -10,7 +10,7 @@ pub struct Scene {
     pub background: Option<DynamicImage>,
 }
 
-pub trait Traceable {
+pub trait Traceable: Send + Sync {
     fn intersection(&self, origin: &Vec3, direction: &Vec3) -> Option<Intersection>;
 }
 
@@ -26,6 +26,90 @@ pub struct Material {
     pub albedo: Vec4,
     pub specular_exponent: f32,
     pub refractive_index: f32,
+}
+
+#[allow(dead_code)]
+impl Material {
+    pub const IVORY: Material = Material {
+        diffuse_color: Color {
+            r: 202,
+            g: 202,
+            b: 176,
+        },
+        albedo: Vec4::new(0.6, 0.3, 0.05, 0.0),
+        specular_exponent: 50f32,
+        refractive_index: 1f32,
+    };
+    pub const GREEN: Material = Material {
+        diffuse_color: Color {
+            r: 36,
+            g: 105,
+            b: 25,
+        },
+        albedo: Vec4::new(0.9, 0.1, 0.0, 0.0),
+        specular_exponent: 10f32,
+        refractive_index: 1f32,
+    };
+    pub const RED: Material = Material {
+        diffuse_color: Color {
+            r: 36,
+            g: 25,
+            b: 25,
+        },
+        albedo: Vec4::new(0.9, 0.1, 0.0, 0.0),
+        specular_exponent: 10f32,
+        refractive_index: 1f32,
+    };
+    pub const BROWN: Material = Material {
+        diffuse_color: Color {
+            r: 123,
+            g: 63,
+            b: 0,
+        },
+        albedo: Vec4::new(0.9, 0.1, 0.0, 0.0),
+        specular_exponent: 40f32,
+        refractive_index: 1f32,
+    };
+    pub const PURPLE: Material = Material {
+        diffuse_color: Color {
+            r: 75,
+            g: 0,
+            b: 130,
+        },
+        albedo: Vec4::new(0.9, 0.1, 0.0, 0.0),
+        specular_exponent: 40f32,
+        refractive_index: 1f32,
+    };
+    pub const ORANGE: Material = Material {
+        diffuse_color: Color {
+            r: 250,
+            g: 69,
+            b: 1,
+        },
+        albedo: Vec4::new(0.9, 0.1, 0.0, 0.0),
+        specular_exponent: 40f32,
+        refractive_index: 1f32,
+    };
+    pub const MIRROR: Material = Material {
+        diffuse_color: Color {
+            r: 255,
+            g: 255,
+            b: 255,
+        },
+        albedo: Vec4::new(0.0, 10.0, 0.8, 0.0),
+        specular_exponent: 1425f32,
+        refractive_index: 1f32,
+    };
+    pub const GLASS: Material = Material {
+        diffuse_color: Color {
+            r: 150,
+            g: 175,
+            b: 200,
+        },
+        albedo: Vec4::new(0.0, 0.5, 0.1, 0.8),
+        specular_exponent: 125f32,
+        refractive_index: 1.5f32,
+    };
 }
 
 pub struct Intersection {
@@ -136,7 +220,7 @@ impl Traceable for Triangle {
 
         Some(Intersection {
             point: origin + t * direction,
-            normal: v0v2.cross(v0v1).normalize(),
+            normal: v0v1.cross(v0v2).normalize(),
             material: self.material,
         })
     }
@@ -220,30 +304,3 @@ impl Traceable for AABB {
         })
     }
 }
-
-// TODO: Finish implementing plane, box, and triangle-ray intersections.
-// pub struct Plane {
-//     point: Vec3,
-//     normal: Vec3,
-//     material: Material,
-// }
-
-// impl Plane {
-//     pub fn new(point: Vec3, normal: Vec3, material: Material) -> Plane {
-//         Plane {
-//             point,
-//             normal,
-//             material,
-//         }
-//     }
-
-//     pub fn intersects(&self, origin: &Vec3, direction: &Vec3) -> bool {
-//         let denominator = self.normal.dot(*direction);
-//         if denominator > 0.0001f32 {
-//             let hit = self.point - origin;
-//             let distance = hit.dot(self.normal) / denominator;
-//             return distance > 0f32;
-//         }
-//         return false;
-//     }
-// }

@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::{f32::consts::PI, mem::swap};
 
 use glam::Vec3;
@@ -190,16 +191,20 @@ pub fn render(scene: Scene, output: &str) {
     let mut frame_buffer: RgbImage = ImageBuffer::new(IMAGE_WIDTH, IMAGE_HEIGHT);
     let fov = PI / 2f32;
 
-    for (x, y, pixel) in frame_buffer.enumerate_pixels_mut() {
-        let x_pos = (2f32 * (x as f32 + 0.5) / IMAGE_WIDTH as f32 - 1f32)
-            * f32::tan(fov / 2f32)
-            * IMAGE_WIDTH as f32
-            / IMAGE_HEIGHT as f32;
-        let y_pos = -(2f32 * (y as f32 + 0.5) / IMAGE_HEIGHT as f32 - 1f32) * f32::tan(fov / 2f32);
+    frame_buffer
+        .enumerate_pixels_mut()
+        .par_bridge()
+        .for_each(|(x, y, pixel)| {
+            let x_pos = (2f32 * (x as f32 + 0.5) / IMAGE_WIDTH as f32 - 1f32)
+                * f32::tan(fov / 2f32)
+                * IMAGE_WIDTH as f32
+                / IMAGE_HEIGHT as f32;
+            let y_pos =
+                -(2f32 * (y as f32 + 0.5) / IMAGE_HEIGHT as f32 - 1f32) * f32::tan(fov / 2f32);
 
-        let direction = Vec3::normalize(Vec3::new(x_pos, y_pos, -1f32));
-        *pixel = cast_ray(&scene, &Vec3::ZERO, &direction, 0).as_rgb();
-    }
+            let direction = Vec3::normalize(Vec3::new(x_pos, y_pos, -1f32));
+            *pixel = cast_ray(&scene, &Vec3::ZERO, &direction, 0).as_rgb();
+        });
 
     frame_buffer.save(output).unwrap();
     println!("Image has been rendered and saved to {output}!");

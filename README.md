@@ -21,19 +21,22 @@ The default image output produces a file in the calling directory called `out.pn
 - [x] Sphere outlines
 - [x] Sphere materials
 - [x] Lighting
-- [ ] Colored lighting
 - [x] Specularity
 - [x] Shadows
 - [x] Reflections
 - [x] Refraction
 - [x] Environment map support
 - [x] Additional object types and meshes
-- [ ] Refactor codebase for readability (this may be an endless endeavor)
 - [x] Loadable scene configurations
-- [ ] Loadable custom meshes
 - [x] CLI image generation and output options
-- [ ] Multi-threading
+- [x] Multi-threading (parallelization with Rayon)
+- [ ] Loadable custom meshes
+- [ ] Colored lighting
+- [ ] Texture map support
+- [ ] Acceleration structures
 - [ ] GUI with parametric support
 - [ ] Real-time calculations including camera movement
 - [ ] Antialiasing
+- [ ] Shading improvements
 - [ ] Rasterization-based rendering options
+- [ ] Refactor codebase for readability (this may be an endless endeavor)
